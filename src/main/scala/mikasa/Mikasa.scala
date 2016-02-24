@@ -22,15 +22,20 @@ trait Mikasa
     val snsPublisher = new SNSPublisherCompornent {
       override val snsService: SNSService = sns
     }
-    AkkaService.registerActorWithRouter(sqsDeleter, config.deleterPoolSize)
-    AkkaService.registerActorWithRouter(snsPublisher, config.publisherPoolSize)
+    AkkaService.registerCommonActor(sqsDeleter, config.deleterPoolSize)
+    AkkaService.registerCommonActor(snsPublisher, config.publisherPoolSize)
+
+    info("mikasa init.")
   }
 
   def register(actors: MikasaActor*): Unit = {
-    actors.foreach { actor =>
-      AkkaService.registerActor(actor)
-    }
+    actors foreach { AkkaService.registerReceiverActor }
   }
 
-  def terminate(): Unit = AkkaService.terminateActors()
+  def start(): Unit = AkkaService.startReceiverActors()
+
+  def terminate(): Unit = {
+    AkkaService.terminateActors()
+    info("mikasa end.")
+  }
 }

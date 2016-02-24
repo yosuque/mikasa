@@ -25,25 +25,25 @@ trait SQSReceiver
     sqsService.createRequest(queueUrl, param.maxNum, param.waitTime)
 
   private val worker = {
-    val sqsDeleter = AkkaService.getActor("sqs-deleter")
-    val snsPublisher = AkkaService.getActor("sns-publisher")
+    val sqsDeleter = AkkaService.getCommonActor("sqs-deleter")
+    val snsPublisher = AkkaService.getCommonActor("sns-publisher")
 
     context.actorOf(SQSWorker.props(queueUrl, param, sqsDeleter, snsPublisher, process _)
       .withRouter(RoundRobinPool(param.poolSize)), s"${param.actorName}-worker")
   }
 
-  sys.addShutdownHook({
+  sys.addShutdownHook {
     val timeout = 20.seconds
     Await.result(gracefulStop(worker, timeout), timeout)
     context.system.stop(self)
     info(s"${param.actorName}-worker end.")
-  })
+  }
 
   override def receive = {
     case Polling => {
       self ! Polling
       val messages = sqsService.receiveMessages(receiveMessageRequest)
-      messages.foreach { message => worker ! Run(message) }
+      messages.par foreach { message => worker ! Run(message) }
     }
   }
 
