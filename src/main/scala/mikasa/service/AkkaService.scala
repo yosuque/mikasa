@@ -36,19 +36,22 @@ private[mikasa] object AkkaService extends MikasaLogger {
   def getReceiverActor(key: String): ActorRef = receivers.get(key)
 
   def startReceiverActors(): Unit = {
-    receivers.par foreach { case (name, receiver) =>
-      receiver ! Polling
-      info(s"${name} start.")
+    receivers.par foreach {
+      case (name, receiver) =>
+        receiver ! Polling
+        info(s"${name} start.")
     }
   }
 
   def terminateActors(): Unit = {
-    receivers.par foreach { case (name, receiver) =>
-      Await.result(gracefulStop(receiver, TIMEOUT), TIMEOUT)
-      info(s"${name} end.")
+    receivers.par foreach {
+      case (name, receiver) =>
+        Await.result(gracefulStop(receiver, TIMEOUT), TIMEOUT)
+        info(s"${name} end.")
     }
-    commons.values.par foreach { case (name, common) =>
-      Await.result(gracefulStop(common, TIMEOUT), TIMEOUT)
+    commons.par foreach {
+      case (name, common) =>
+        Await.result(gracefulStop(common, TIMEOUT), TIMEOUT)
     }
     val _ = Await.result(system.terminate(), TIMEOUT)
   }
